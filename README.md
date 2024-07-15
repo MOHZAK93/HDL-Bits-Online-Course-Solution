@@ -324,3 +324,121 @@ As the diagram shows, this can be done more easily using the replication and con
 
     The top vector is a concatenation of 5 repeats of each input
     The bottom vector is 5 repeats of a concatenation of the 5 inputs
+
+###########################################################################
+Vector5
+###########################################################################
+By now, you're familiar with a module, which is a circuit that interacts with its outside through input and output ports. Larger, more complex circuits are built by composing bigger modules out of smaller modules and other pieces (such as assign statements and always blocks) connected together. This forms a hierarchy, as modules can contain instances of other modules.
+
+The figure below shows a very simple circuit with a sub-module. In this exercise, create one instance of module mod_a, then connect the module's three pins (in1, in2, and out) to your top-level module's three ports (wires a, b, and out). The module mod_a is provided for you — you must instantiate it.
+
+When connecting modules, only the ports on the module are important. You do not need to know the code inside the module. The code for module mod_a looks like this:
+Module moda.png
+
+module mod_a ( input in1, input in2, output out );
+    // Module body
+endmodule
+
+The hierarchy of modules is created by instantiating one module inside another, as long as all of the modules used belong to the same project (so the compiler knows where to find the module). The code for one module is not written inside another module's body (Code for different modules are not nested).
+
+You may connect signals to the module by port name or port position. For extra practice, try both methods.
+
+#############################################################################
+module
+#############################################################################
+This problem is similar to the previous one (module). You are given a module named mod_a that has 2 outputs and 4 inputs, in that order. You must connect the 6 ports by position to your top-level module's ports out1, out2, a, b, c, and d, in that order.
+
+You are given the following module:
+
+module mod_a ( output, output, input, input, input, input );
+
+############################################################################
+Module_pos
+############################################################################
+This problem is similar to module. You are given a module named mod_a that has 2 outputs and 4 inputs, in some order. You must connect the 6 ports by name to your top-level module's ports:
+
+You are given the following module:
+
+module mod_a ( output out1, output out2, input in1, input in2, input in3, input in4);
+
+############################################################################
+Module_name
+############################################################################
+You are given a module my_dff with two inputs and one output (that implements a D flip-flop). Instantiate three of them, then chain them together to make a shift register of length 3. The clk port needs to be connected to all instances.
+
+The module provided to you is: module my_dff ( input clk, input d, output q );
+
+Note that to make the internal connections, you will need to declare some wires. Be careful about naming your wires and module instances: the names must be unique.
+
+############################################################################
+Module_shift
+############################################################################
+This exercise is an extension of module_shift. Instead of module ports being only single pins, we now have modules with vectors as ports, to which you will attach wire vectors instead of plain wires. Like everywhere else in Verilog, the vector length of the port does not have to match the wire connecting to it, but this will cause zero-padding or trucation of the vector. This exercise does not use connections with mismatched vector lengths.
+
+You are given a module my_dff8 with two inputs and one output (that implements a set of 8 D flip-flops). Instantiate three of them, then chain them together to make a 8-bit wide shift register of length 3. In addition, create a 4-to-1 multiplexer (not provided) that chooses what to output depending on sel[1:0]: The value at the input d, after the first, after the second, or after the third D flip-flop. (Essentially, sel selects how many cycles to delay the input, from zero to three clock cycles.)
+
+The module provided to you is: module my_dff8 ( input clk, input [7:0] d, output [7:0] q );
+
+The multiplexer is not provided. One possible way to write one is inside an always block with a case statement inside.
+
+############################################################################
+Module_shift8
+############################################################################
+You are given a module add16 that performs a 16-bit addition. Instantiate two of them to create a 32-bit adder. One add16 module computes the lower 16 bits of the addition result, while the second add16 module computes the upper 16 bits of the result, after receiving the carry-out from the first adder. Your 32-bit adder does not need to handle carry-in (assume 0) or carry-out (ignored), but the internal modules need to in order to function correctly. (In other words, the add16 module performs 16-bit a + b + cin, while your module performs 32-bit a + b).
+
+Connect the modules together as shown in the diagram below. The provided module add16 has the following declaration:
+
+module add16 ( input[15:0] a, input[15:0] b, input cin, output[15:0] sum, output cout );
+
+############################################################################
+module_add
+############################################################################
+In this exercise, you will create a circuit with two levels of hierarchy. Your top_module will instantiate two copies of add16 (provided), each of which will instantiate 16 copies of add1 (which you must write). Thus, you must write two modules: top_module and add1.
+
+Like module_add, you are given a module add16 that performs a 16-bit addition. You must instantiate two of them to create a 32-bit adder. One add16 module computes the lower 16 bits of the addition result, while the second add16 module computes the upper 16 bits of the result. Your 32-bit adder does not need to handle carry-in (assume 0) or carry-out (ignored).
+
+Connect the add16 modules together as shown in the diagram below. The provided module add16 has the following declaration:
+
+module add16 ( input[15:0] a, input[15:0] b, input cin, output[15:0] sum, output cout );
+
+Within each add16, 16 full adders (module add1, not provided) are instantiated to actually perform the addition. You must write the full adder module that has the following declaration:
+
+module add1 ( input a, input b, input cin, output sum, output cout );
+
+Recall that a full adder computes the sum and carry-out of a+b+cin.
+
+In summary, there are three modules in this design:
+
+    top_module — Your top-level module that contains two of...
+    add16, provided — A 16-bit adder module that is composed of 16 of...
+    add1 — A 1-bit full adder module.
+
+
+If your submission is missing a module add1, you will get an error message that says Error (12006): Node instance "user_fadd[0].a1" instantiates undefined entity "add1".
+
+############################################################################
+Module_fadd
+############################################################################
+One drawback of the ripple carry adder (See previous exercise) is that the delay for an adder to compute the carry out (from the carry-in, in the worst case) is fairly slow, and the second-stage adder cannot begin computing its carry-out until the first-stage adder has finished. This makes the adder slow. One improvement is a carry-select adder, shown below. The first-stage adder is the same as before, but we duplicate the second-stage adder, one assuming carry-in=0 and one assuming carry-in=1, then using a fast 2-to-1 multiplexer to select which result happened to be correct.
+
+In this exercise, you are provided with the same module add16 as the previous exercise, which adds two 16-bit numbers with carry-in and produces a carry-out and 16-bit sum. You must instantiate three of these to build the carry-select adder, using your own 16-bit 2-to-1 multiplexer.
+
+Connect the modules together as shown in the diagram below. The provided module add16 has the following declaration:
+
+module add16 ( input[15:0] a, input[15:0] b, input cin, output[15:0] sum, output cout );
+
+###########################################################################
+module_cseladd
+###########################################################################
+An adder-subtractor can be built from an adder by optionally negating one of the inputs, which is equivalent to inverting the input then adding 1. The net result is a circuit that can do two operations: (a + b + 0) and (a + ~b + 1). See Wikipedia if you want a more detailed explanation of how this circuit works.
+
+Build the adder-subtractor below.
+
+You are provided with a 16-bit adder module, which you need to instantiate twice:
+
+module add16 ( input[15:0] a, input[15:0] b, input cin, output[15:0] sum, output cout );
+
+Use a 32-bit wide XOR gate to invert the b input whenever sub is 1. (This can also be viewed as b[31:0] XORed with sub replicated 32 times. See replication operator.). Also connect the sub input to the carry-in of the adder.
+
+############################################################################
+
