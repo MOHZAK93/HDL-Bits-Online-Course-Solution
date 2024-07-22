@@ -441,4 +441,195 @@ module add16 ( input[15:0] a, input[15:0] b, input cin, output[15:0] sum, output
 Use a 32-bit wide XOR gate to invert the b input whenever sub is 1. (This can also be viewed as b[31:0] XORed with sub replicated 32 times. See replication operator.). Also connect the sub input to the carry-in of the adder.
 
 ############################################################################
+Module_addsub
+############################################################################
+Since digital circuits are composed of logic gates connected with wires, any circuit can be expressed as some combination of modules and assign statements. However, sometimes this is not the most convenient way to describe the circuit. Procedures (of which always blocks are one example) provide an alternative syntax for describing circuits.
 
+For synthesizing hardware, two types of always blocks are relevant:
+
+    Combinational: always @(*)
+    Clocked: always @(posedge clk)
+
+Combinational always blocks are equivalent to assign statements, thus there is always a way to express a combinational circuit both ways. The choice between which to use is mainly an issue of which syntax is more convenient. The syntax for code inside a procedural block is different from code that is outside. Procedural blocks have a richer set of statements (e.g., if-then, case), cannot contain continuous assignments*, but also introduces many new non-intuitive ways of making errors. (*Procedural continuous assignments do exist, but are somewhat different from continuous assignments, and are not synthesizable.)
+
+For example, the assign and combinational always block describe the same circuit. Both create the same blob of combinational logic. Both will recompute the output whenever any of the inputs (right side) changes value.
+assign out1 = a & b | c ^ d;
+always @(*) out2 = a & b | c ^ d;
+
+For combinational always blocks, always use a sensitivity list of (*). Explicitly listing out the signals is error-prone (if you miss one), and is ignored for hardware synthesis. If you explicitly specify the sensitivity list and miss a signal, the synthesized hardware will still behave as though (*) was specified, but the simulation will not and not match the hardware's behaviour. (In SystemVerilog, use always_comb.)
+
+A note on wire vs. reg: The left-hand-side of an assign statement must be a net type (e.g., wire), while the left-hand-side of a procedural assignment (in an always block) must be a variable type (e.g., reg). These types (wire vs. reg) have nothing to do with what hardware is synthesized, and is just syntax left over from Verilog's use as a hardware simulation language.
+A bit of practice
+
+Build an AND gate using both an assign statement and a combinational always block. (Since assign statements and combinational always blocks function identically, there is no way to enforce that you're using both methods. But you're here for practice, right?...)
+
+###########################################################################
+Alwaysblock1
+###########################################################################
+For hardware synthesis, there are two types of always blocks that are relevant:
+
+    Combinational: always @(*)
+    Clocked: always @(posedge clk)
+
+Clocked always blocks create a blob of combinational logic just like combinational always blocks, but also creates a set of flip-flops (or "registers") at the output of the blob of combinational logic. Instead of the outputs of the blob of logic being visible immediately, the outputs are visible only immediately after the next (posedge clk).
+Blocking vs. Non-Blocking Assignment
+
+There are three types of assignments in Verilog:
+
+    Continuous assignments (assign x = y;). Can only be used when not inside a procedure ("always block").
+    Procedural blocking assignment: (x = y;). Can only be used inside a procedure.
+    Procedural non-blocking assignment: (x <= y;). Can only be used inside a procedure.
+
+In a combinational always block, use blocking assignments. In a clocked always block, use non-blocking assignments. A full understanding of why is not particularly useful for hardware design and requires a good understanding of how Verilog simulators keep track of events. Not following this rule results in extremely hard to find errors that are both non-deterministic and differ between simulation and synthesized hardware.
+A bit of practice
+
+Build an XOR gate three ways, using an assign statement, a combinational always block, and a clocked always block. Note that the clocked always block produces a different circuit from the other two: There is a flip-flop so the output is delayed.
+
+###########################################################################
+Alwaysblock2
+###########################################################################
+An if statement usually creates a 2-to-1 multiplexer, selecting one input if the condition is true, and the other input if the condition is false.
+Always if mux.png
+
+always @(*) begin
+    if (condition) begin
+        out = x;
+    end
+    else begin
+        out = y;
+    end
+end
+
+This is equivalent to using a continuous assignment with a conditional operator:
+
+assign out = (condition) ? x : y;
+
+However, the procedural if statement provides a new way to make mistakes. The circuit is combinational only if out is always assigned a value.
+A bit of practice
+
+Build a 2-to-1 mux that chooses between a and b. Choose b if both sel_b1 and sel_b2 are true. Otherwise, choose a. Do the same twice, once using assign statements and once using a procedural if statement.
+
+###########################################################################
+Always_if
+###########################################################################
+A common source of errors: How to avoid making latches
+
+When designing circuits, you must think first in terms of circuits:
+
+    I want this logic gate
+    I want a combinational blob of logic that has these inputs and produces these outputs
+    I want a combinational blob of logic followed by a set of flip-flops
+
+What you must not do is write the code first, then hope it generates a proper circuit.
+
+    If (cpu_overheated) then shut_off_computer = 1;
+    If (~arrived) then keep_driving = ~gas_tank_empty;
+
+Syntactically-correct code does not necessarily result in a reasonable circuit (combinational logic + flip-flops). The usual reason is: "What happens in the cases other than those you specified?". Verilog's answer is: Keep the outputs unchanged.
+
+This behaviour of "keep outputs unchanged" means the current state needs to be remembered, and thus produces a latch. Combinational logic (e.g., logic gates) cannot remember any state. Watch out for Warning (10240): ... inferring latch(es)" messages. Unless the latch was intentional, it almost always indicates a bug. Combinational circuits must have a value assigned to all outputs under all conditions. This usually means you always need else clauses or a default value assigned to the outputs.
+Demonstration
+
+The following code contains incorrect behaviour that creates a latch. Fix the bugs so that you will shut off the computer only if it's really overheated, and stop driving if you've arrived at your destination or you need to refuel.
+
+always @(*) begin
+    if (cpu_overheated)
+       shut_off_computer = 1;
+end
+
+always @(*) begin
+    if (~arrived)
+       keep_driving = ~gas_tank_empty;
+end
+
+###########################################################################
+Always_if2
+###########################################################################
+Case statements in Verilog are nearly equivalent to a sequence of if-elseif-else that compares one expression to a list of others. Its syntax and functionality differs from the switch statement in C.
+
+always @(*) begin     // This is a combinational circuit
+    case (in)
+      1'b1: begin 
+               out = 1'b1;  // begin-end if >1 statement
+            end
+      1'b0: out = 1'b0;
+      default: out = 1'bx;
+    endcase
+end
+
+    The case statement begins with case and each "case item" ends with a colon. There is no "switch".
+    Each case item can execute exactly one statement. This makes the "break" used in C unnecessary. But this means that if you need more than one statement, you must use begin ... end.
+    Duplicate (and partially overlapping) case items are permitted. The first one that matches is used. C does not allow duplicate case items.
+
+A bit of practice
+
+Case statements are more convenient than if statements if there are a large number of cases. So, in this exercise, create a 6-to-1 multiplexer. When sel is between 0 and 5, choose the corresponding data input. Otherwise, output 0. The data inputs and outputs are all 4 bits wide.
+
+Be careful of inferring latches
+
+###########################################################################
+Always_case
+###########################################################################
+A priority encoder is a combinational circuit that, when given an input bit vector, outputs the position of the first 1 bit in the vector. For example, a 8-bit priority encoder given the input 8'b10010000 would output 3'd4, because bit[4] is first bit that is high.
+
+Build a 4-bit priority encoder. For this problem, if none of the input bits are high (i.e., input is zero), output zero. Note that a 4-bit number has 16 possible combinations.
+
+###########################################################################
+Always_case2
+###########################################################################
+Build a priority encoder for 8-bit inputs. Given an 8-bit vector, the output should report the first (least significant) bit in the vector that is 1. Report zero if the input vector has no bits that are high. For example, the input 8'b10010000 should output 3'd4, because bit[4] is first bit that is high.
+
+From the previous exercise (always_case2), there would be 256 cases in the case statement. We can reduce this (down to 9 cases) if the case items in the case statement supported don't-care bits. This is what casez is for: It treats bits that have the value z as don't-care in the comparison.
+
+For example, this would implement the 4-input priority encoder from the previous exercise:
+
+always @(*) begin
+    casez (in[3:0])
+        4'bzzz1: out = 0;   // in[3:1] can be anything
+        4'bzz1z: out = 1;
+        4'bz1zz: out = 2;
+        4'b1zzz: out = 3;
+        default: out = 0;
+    endcase
+end
+
+A case statement behaves as though each item is checked sequentially (in reality, a big combinational logic function). Notice how there are certain inputs (e.g., 4'b1111) that will match more than one case item. The first match is chosen (so 4'b1111 matches the first item, out = 0, but not any of the later ones).
+
+    There is also a similar casex that treats both x and z as don't-care. I don't see much purpose to using it over casez.
+    The digit ? is a synonym for z. so 2'bz0 is the same as 2'b?0
+
+It may be less error-prone to explicitly specify the priority behaviour rather than rely on the ordering of the case items. For example, the following will still behave the same way if some of the case items were reordered, because any bit pattern can only match at most one case item:
+
+    casez (in[3:0])
+        4'bzzz1: ...
+        4'bzz10: ...
+        4'bz100: ...
+        4'b1000: ...
+        default: ...
+    endcase
+
+###########################################################################
+Always_casez
+###########################################################################
+Suppose you're building a circuit to process scancodes from a PS/2 keyboard for a game. Given the last two bytes of scancodes received, you need to indicate whether one of the arrow keys on the keyboard have been pressed. This involves a fairly simple mapping, which can be implemented as a case statement (or if-elseif) with four cases.
+Scancode [15:0] 	Arrow key
+16'he06b 	left arrow
+16'he072 	down arrow
+16'he074 	right arrow
+16'he075 	up arrow
+Anything else 	none
+
+Your circuit has one 16-bit input, and four outputs. Build this circuit that recognizes these four scancodes and asserts the correct output.
+
+To avoid creating latches, all outputs must be assigned a value in all possible conditions (See also always_if2). Simply having a default case is not enough. You must assign a value to all four outputs in all four cases and the default case. This can involve a lot of unnecessary typing. One easy way around this is to assign a "default value" to the outputs before the case statement:
+
+always @(*) begin
+    up = 1'b0; down = 1'b0; left = 1'b0; right = 1'b0;
+    case (scancode)
+        ... // Set to 1 as necessary.
+    endcase
+end
+
+This style of code ensures the outputs are assigned a value (of 0) in all possible cases unless the case statement overrides the assignment. This also means that a default: case item becomes unnecessary.
+
+Reminder: The logic synthesizer generates a combinational circuit that behaves equivalently to what the code describes. Hardware does not "execute" the lines of code in sequence.
