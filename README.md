@@ -633,3 +633,99 @@ end
 This style of code ensures the outputs are assigned a value (of 0) in all possible cases unless the case statement overrides the assignment. This also means that a default: case item becomes unnecessary.
 
 Reminder: The logic synthesizer generates a combinational circuit that behaves equivalently to what the code describes. Hardware does not "execute" the lines of code in sequence.
+
+###########################################################################
+Conditional
+###########################################################################
+Verilog has a ternary conditional operator ( ? : ) much like C:
+
+(condition ? if_true : if_false)
+
+This can be used to choose one of two values based on condition (a mux!) on one line, without using an if-then inside a combinational always block.
+
+Examples:
+
+(0 ? 3 : 5)     // This is 5 because the condition is false.
+(sel ? b : a)   // A 2-to-1 multiplexer between a and b selected by sel.
+
+always @(posedge clk)         // A T-flip-flop.
+  q <= toggle ? ~q : q;
+
+always @(*)                   // State transition logic for a one-input FSM
+  case (state)
+    A: next = w ? B : A;
+    B: next = w ? A : B;
+  endcase
+
+assign out = ena ? q : 1'bz;  // A tri-state buffer
+
+((sel[1:0] == 2'h0) ? a :     // A 3-to-1 mux
+ (sel[1:0] == 2'h1) ? b :
+                      c )
+
+A Bit of Practice
+
+Given four unsigned numbers, find the minimum. Unsigned numbers can be compared with standard comparison operators (a < b). Use the conditional operator to make two-way min circuits, then compose a few of them to create a 4-way min circuit. You'll probably want some wire vectors for the intermediate results.
+
+Expected solution length: Around 5 lines
+
+###########################################################################
+Reduction
+###########################################################################
+You're already familiar with bitwise operations between two values, e.g., a & b or a ^ b. Sometimes, you want to create a wide gate that operates on all of the bits of one vector, like (a[0] & a[1] & a[2] & a[3] ... ), which gets tedious if the vector is long.
+
+The reduction operators can do AND, OR, and XOR of the bits of a vector, producing one bit of output:
+
+& a[3:0]     // AND: a[3]&a[2]&a[1]&a[0]. Equivalent to (a[3:0] == 4'hf)
+| b[3:0]     // OR:  b[3]|b[2]|b[1]|b[0]. Equivalent to (b[3:0] != 4'h0)
+^ c[2:0]     // XOR: c[2]^c[1]^c[0]
+
+These are unary operators that have only one operand (similar to the NOT operators ! and ~). You can also invert the outputs of these to create NAND, NOR, and XNOR gates, e.g., (~& d[7:0]).
+
+Now you can revisit 4-input gates and 100-input gates.
+A Bit of Practice
+
+Parity checking is often used as a simple method of detecting errors when transmitting data through an imperfect channel. Create a circuit that will compute a parity bit for a 8-bit byte (which will add a 9th bit to the byte). We will use "even" parity, where the parity bit is just the XOR of all 8 data bits.
+
+Expected solution length: Around 1 line.
+
+###########################################################################
+Gates100
+###########################################################################
+Build a combinational circuit with 100 inputs, in[99:0].
+
+There are 3 outputs:
+
+    out_and: output of a 100-input AND gate.
+    out_or: output of a 100-input OR gate.
+    out_xor: output of a 100-input XOR gate.
+
+
+###########################################################################
+Vector100r
+###########################################################################
+Given a 100-bit input vector [99:0], reverse its bit ordering.
+
+###########################################################################
+Popcount255
+###########################################################################
+A "population count" circuit counts the number of '1's in an input vector. Build a population count circuit for a 255-bit input vector.
+
+###########################################################################
+Adder100i
+###########################################################################
+Create a 100-bit binary ripple-carry adder by instantiating 100 full adders. The adder adds two 100-bit numbers and a carry-in to produce a 100-bit sum and carry out. To encourage you to actually instantiate full adders, also output the carry-out from each full adder in the ripple-carry adder. cout[99] is the final carry-out from the last full adder, and is the carry-out you usually see.
+
+###########################################################################
+Bcdadd100
+###########################################################################
+You are provided with a BCD one-digit adder named bcd_fadd that adds two BCD digits and carry-in, and produces a sum and carry-out.
+
+module bcd_fadd (
+    input [3:0] a,
+    input [3:0] b,
+    input     cin,
+    output   cout,
+    output [3:0] sum );
+
+Instantiate 100 copies of bcd_fadd to create a 100-digit BCD ripple-carry adder. Your adder should add two 100-digit BCD numbers (packed into 400-bit vectors) and a carry-in to produce a 100-digit sum and carry out.

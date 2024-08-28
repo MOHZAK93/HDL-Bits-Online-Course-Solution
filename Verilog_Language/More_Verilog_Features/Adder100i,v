@@ -1,0 +1,18 @@
+module top_module( 
+    input [99:0] a, b,
+    input cin,
+    output [99:0] cout,
+    output [99:0] sum );
+    assign {cout[0], sum[0]} = a[0] + b[0] + cin;
+    genvar i;
+    generate begin
+        for (i = 1; i<100; i++) begin: gen
+            FA fa1(.fa_sum(sum[i]), .fa_carry(cout[i]), .in1(a[i]), .in2(b[i]), .c_in(cout[i-1]));
+        end:gen
+    end
+    endgenerate
+endmodule
+
+module FA(output fa_sum, fa_carry, input in1, in2, c_in);
+    assign {fa_carry, fa_sum} = in1 + in2 + c_in;
+endmodule
